@@ -31,6 +31,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,9 +52,6 @@ import com.example.bluetooth_classic.ui.theme.BluetoothclassicTheme
 private val bluetoothManager: BluetoothManager? = getSystemService(BluetoothManager::class.java)
 private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.getAdapter() */
 private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
-
-
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,39 +75,50 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Greeting(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    var devices = remember { mutableStateOf("") }
     Box(modifier = modifier
         .fillMaxWidth()
         .fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ){
+
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Bluetooth classic demo",
+                text = "Bluetooth classic",
                 modifier = modifier,
                 fontSize = 30.sp
             )
             Spacer(modifier = Modifier.height(30.dp))
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ){
-                Button(onClick = { turnOnBluetooth( context ) }) {
-                    Text(text = "Prender")
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                    //Boton prender bluetooth
+                    Button(onClick = { turnOnBluetooth( context ) }) {
+                        Text(text = "Prender")
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    //Boton apagar bluetooth
+                    Button(onClick = { turnOffBluetooth( context ) }) {
+                        Text(text = "Apagar")
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    //Boton visible dispositivo
+                    Button(onClick = { discoveredDevice( context ) }) {
+                        Text(text = "Visibilidad")
+                    }
                 }
-                Spacer(modifier = Modifier.width(30.dp))
-                Button(onClick = {}) {
-                    Text(text = "Buscar")
-                }
-                Spacer(modifier = Modifier.width(30.dp))
-                Button(onClick = { turnOffBluetooth( context ) }) {
-                    Text(text = "Apagar")
+                Spacer(modifier = Modifier.width(5.dp))
+                Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                    //Boton mostrar dispositivos vinculados
+                    Button(onClick = { devices.value = pairDevices( context ) }) {
+                        Text(text = "Vinculados")
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "List of devices", modifier = modifier)
-            Spacer(modifier = Modifier.height(16.dp))
-
+            Text(text = "Dispositivos")
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = devices.value, modifier = modifier)
         }
     }
 }
@@ -116,11 +127,11 @@ fun Greeting(modifier: Modifier = Modifier) {
 
 private fun turnOnBluetooth(context: Context) {
     if (bluetoothAdapter?.isEnabled == false) {
+        Toast.makeText(context, "Encendiendo bluetooth...", Toast.LENGTH_SHORT).show()
         /* Tampoco funciono a como dice la documentación, no reconoce la constante "REQUEST_ENABLE_BT"
         val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
         startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
         */
-
         val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
         if (ActivityCompat.checkSelfPermission(
                 context,
@@ -130,13 +141,13 @@ private fun turnOnBluetooth(context: Context) {
             context.startActivity(enableBtIntent)
             return
         }
-
     }else{
         Toast.makeText(context, "El bluetooth ya se encuentra activo", Toast.LENGTH_SHORT).show()
     }
 }
 
 private fun turnOffBluetooth(context: Context) {
+    Toast.makeText(context, "Apagando el bluetooth...", Toast.LENGTH_SHORT).show()
     if (bluetoothAdapter?.isEnabled == true){
         if (ActivityCompat.checkSelfPermission(
                 context,
@@ -150,6 +161,49 @@ private fun turnOffBluetooth(context: Context) {
         Toast.makeText(context, "El bluetooth ya se encuentra desactivado", Toast.LENGTH_SHORT).show()
     }
 }
+
+private fun discoveredDevice(context: Context){
+    if (bluetoothAdapter?.isDiscovering == false){
+        val discoverBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE)
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            context.startActivity(discoverBtIntent)
+            return
+        }
+    }else{
+
+    }
+}
+
+private fun pairDevices(context: Context): String {
+
+    if (bluetoothAdapter?.isEnabled == true){
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            val devices: Set<BluetoothDevice> =
+                bluetoothAdapter.bondedDevices
+
+            var list = ""
+
+            for (device in devices){
+                list = "\n Device : "+device.name+" , "+device
+            }
+            return list
+        }else{
+            return "No tienes permiso"
+        }
+    }else{
+        Toast.makeText(context, "Enciende el bluetooth primero", Toast.LENGTH_SHORT).show()
+        return "Enciende el bluetooth..."
+    }
+}
+
 
 @Preview(showBackground = true)
 @Composable
